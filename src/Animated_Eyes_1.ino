@@ -45,6 +45,8 @@
 #include <Wire.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <./data/frame.h> // Inclino meter frame with white background
+// #include <./data/ladybug.h>
 #define ONE_WIRE_BUS 13
 Adafruit_MPU6050 mpu;
 TFT_eSPI    tft = TFT_eSPI();           // A single instance is used for 1 or 2 displays
@@ -59,7 +61,8 @@ TraceWidget tr1 = TraceWidget(&gr);
 TraceWidget tr2 = TraceWidget(&gr);
 TFT_eSprite maxAcc = TFT_eSprite(&tft); //Text
 TFT_eSprite HallTemp = TFT_eSprite(&tft); //Text
-byte displayPage=2; // Indicate which page should be active
+TFT_eSprite tempSprite = TFT_eSprite(&tft);
+byte displayPage=3; // Indicate which page should be active
 
 
 //++++++++++++++++++++TFT_EYES++++++++++++++++++++++++++++++++++++++++++
@@ -126,10 +129,19 @@ float maxgz = 0.0;
 void setup(void) {
   Serial.begin(9600);
 if (displayPage == 1){
-  setupSensorsPage();
+  setupSensors();
+  tftGraphSetup();
 }
 else if(displayPage == 2){
   setupeyePage();
+} else if(displayPage==3){
+  setupSensors();
+  tft.init();
+  tft.begin();
+  tft.setRotation(3);
+  tft.fillScreen(TFT_BLACK);
+  tempSprite.createSprite(240,240);
+  tempSprite.setSwapBytes(true);
 }
   
 //Display eyes
@@ -174,7 +186,7 @@ void setupeyePage(void){
   startTime = millis(); // For frame-rate calculation
 }
 
-void setupSensorsPage(void){
+void setupSensors(void){
   Wire.setPins(15,16);
   if (!mpu.begin()) {
     Serial.println("Failed to find MPU6050 chip");
@@ -198,6 +210,8 @@ void setupSensorsPage(void){
   Serial.println(sensors.requestTemperatures());
   sensors.setResolution(9);
   sensors.setWaitForConversion(false);  // To Make readings faster
+}
+void tftGraphSetup(void){
   // TFT
   tft.begin();
   tft.setRotation(3);
@@ -220,7 +234,6 @@ void setupSensorsPage(void){
   maxAcc.createSprite(200,10);
   HallTemp.createSprite(120,10);
 }
-
 //read Temp/Accelerator/InputVoltage
 float readMPU(int param) {
   /* Get new sensor events with the readings */
@@ -251,8 +264,7 @@ float readMPU(int param) {
   }
 }
 
-// Create graph from mpu Moves 
-
+// Create graph from mpu Moves
 void graphMPU(byte graphType) {
   
   static uint32_t plotTime = millis();
@@ -305,8 +317,16 @@ void graphMPU(byte graphType) {
   }
 }
 
+void displayTemp(void){
+  tempSprite.pushImage(0,0,240,240,incFrame);
+  tempSprite.pushSprite(0,0);
+
+
+}
 // MAIN LOOP -- runs continuously after setup() ----------------------------
 void loop() {
   // graphMPU(0);
-  updateEye();
+  // updateEye();
+  displayTemp();
+  
 }
